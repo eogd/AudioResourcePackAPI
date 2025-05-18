@@ -128,7 +128,7 @@ public class AudioResourcePackUtil {
                 if (this.packNameProcessed.isEmpty()) throw new IllegalArgumentException("Pack name became empty after sanitization. Please use valid characters (a-z, 0-9, _, ., -).");
     
                 List<File> collectedMp3s = new ArrayList<>();
-                for(File f : this.mp3FilesToProcess){ // Add explicitly added files first
+                for(File f : this.mp3FilesToProcess){
                     if (!collectedMp3s.stream().anyMatch(existing -> existing.getAbsolutePath().equals(f.getAbsolutePath()))) {
                         collectedMp3s.add(f);
                     }
@@ -181,23 +181,27 @@ public class AudioResourcePackUtil {
                 String oggFileName = baseName + ".ogg";
                 File oggFileTarget = new File(soundsDir, oggFileName);
                 
-                String soundEventName = baseName.toLowerCase().replaceAll("[^a-z0-9_]", "");
-                if (soundEventName.isEmpty()) {
-                    soundEventName = "sound_" + System.currentTimeMillis() + "_" + convertedSounds.size();
+                String baseEventName = baseName.toLowerCase().replaceAll("[^a-z0-9_]", "");
+                if (baseEventName.isEmpty()) {
+                    long randomSuffix = System.nanoTime() % 10000;
+                    baseEventName = "sound_" + Math.abs(mp3File.getName().hashCode() % 1000) + "_" + randomSuffix;
                 }
                 
+                String determinedSoundEventName = baseEventName;
                 int counter = 0;
-                String uniqueSoundEventName = soundEventName;
-                while(convertedSounds.stream().anyMatch(cs -> cs.soundEventName.equals(uniqueSoundEventName))) {
+                while (true) {
+                    final String nameToTest = determinedSoundEventName; 
+                    boolean nameExists = convertedSounds.stream().anyMatch(cs -> cs.soundEventName.equals(nameToTest));
+                    if (!nameExists) {
+                        break; 
+                    }
                     counter++;
-                    uniqueSoundEventName = soundEventName + "_" + counter;
+                    determinedSoundEventName = baseEventName + "_" + counter; 
                 }
-                soundEventName = uniqueSoundEventName;
-
 
                 try {
                     if (converter.convertToOgg(mp3File, oggFileTarget)) {
-                        convertedSounds.add(new ConvertedSoundInfo(originalFileName, oggFileName, soundEventName, request.getPackName()));
+                        convertedSounds.add(new ConvertedSoundInfo(originalFileName, oggFileName, determinedSoundEventName, request.getPackName()));
                     } else {
                         System.err.println("WARN: Conversion failed or skipped by converter for: " + mp3File.getName());
                     }
@@ -209,6 +213,7 @@ public class AudioResourcePackUtil {
 
             if (convertedSounds.isEmpty()) {
                 System.err.println("WARN: No sounds were successfully converted. Resource pack will not be created.");
+                deleteDirectory(tempWorkingDir); 
                 return false; 
             }
 
