@@ -1,0 +1,102 @@
+// In another project (e.g., a Spigot plugin)
+
+// Assuming AudioResourcePackUtil is in the classpath, e.g., as a Maven/Gradle dependency
+// import com.example.audioutil.AudioResourcePackUtil;
+// import com.example.audioutil.AudioResourcePackUtil.AudioConverter;
+// import com.example.audioutil.AudioResourcePackUtil.ResourcePackRequest;
+
+import java.io.File;
+import java.io.IOException;
+// Example: If using JAVE2 library for conversion
+// import ws.schild.jave.Encoder;
+// import ws.schild.jave.MultimediaObject;
+// import ws.schild.jave.encode.AudioAttributes;
+// import ws.schild.jave.encode.EncodingAttributes;
+
+public class MyPluginMain /* extends JavaPlugin or other class */ {
+
+    // 1. Implement the AudioConverter interface
+    public static class MyAudioConverterImpl implements AudioResourcePackUtil.AudioConverter {
+        @Override
+        public boolean convertToOgg(File mp3File, File oggFileToCreate) throws Exception {
+            // --- ACTUAL CONVERSION LOGIC HERE ---
+            // This is where you would use a library like JAVE2.
+            // Example (conceptual, requires JAVE2 library and its dependencies):
+            /*
+            try {
+                AudioAttributes audio = new AudioAttributes();
+                audio.setCodec("libvorbis"); // For OGG Vorbis
+                audio.setBitRate(128000);
+                audio.setChannels(2);
+                audio.setSamplingRate(44100);
+
+                EncodingAttributes attrs = new EncodingAttributes();
+                attrs.setOutputFormat("ogg");
+                attrs.setAudioAttributes(audio);
+
+                Encoder encoder = new Encoder(); // from JAVE2
+                encoder.encode(new MultimediaObject(mp3File), oggFileToCreate, attrs);
+                return true;
+            } catch (Exception e) {
+                System.err.println("Audio conversion failed for " + mp3File.getName() + ": " + e.getMessage());
+                throw e; // Allow AudioResourcePackUtil to catch and log if necessary
+            }
+            */
+
+            // Placeholder / Fallback if no real converter is implemented:
+            System.out.println("Placeholder: 'Converting' " + mp3File.getName() + " to " + oggFileToCreate.getName());
+            // For testing, you could copy the mp3 to an ogg extension, but it won't be a valid ogg.
+            // Or create a tiny dummy file.
+             try (java.io.OutputStream os = new java.io.FileOutputStream(oggFileToCreate)) {
+                 os.write(("Dummy OGG for " + mp3File.getName()).getBytes());
+             }
+            return true; // Simulate success
+        }
+    }
+
+    // 2. Use the AudioResourcePackUtil
+    public void generateMyResourcePack() {
+        File mp3InputFolder = new File("path/to/your/mp3_files"); // Specify source
+        File resultingZipFile = new File("path/to/your/output/MyCustomPack.zip"); // Specify destination
+
+        // Ensure parent directory for output exists
+        if (resultingZipFile.getParentFile() != null) {
+            resultingZipFile.getParentFile().mkdirs();
+        }
+
+        AudioResourcePackUtil.AudioConverter myConverter = new MyAudioConverterImpl();
+
+        try {
+            // Minecraft 1.21.x - pack_format is likely 32 or higher.
+            // Please verify the correct pack_format for your target 1.21.x version from official Minecraft sources.
+            // As of early/mid 2024, for snapshots leading to 1.21, it was around 27-32.
+            // Let's assume a hypothetical pack_format for 1.21 for this example.
+            int mc121PackFormat = 32; // <<<<------ UPDATE THIS VALUE BASED ON MC 1.21 RELEASE
+
+            AudioResourcePackUtil.ResourcePackRequest request = new AudioResourcePackUtil.ResourcePackRequest.Builder()
+                .inputDirectory(mp3InputFolder)
+                // .addMp3File(new File(mp3InputFolder, "sound1.mp3")) // Can also add individual files
+                .outputZipFile(resultingZipFile)
+                .packName("myuniquesounds")
+                .packDescription("My awesome custom sounds for Minecraft 1.21!")
+                .packFormat(mc121PackFormat) 
+                .audioConverter(myConverter)
+                .build();
+
+            boolean success = AudioResourcePackUtil.createResourcePack(request);
+
+            if (success) {
+                System.out.println("Resource pack successfully created: " + resultingZipFile.getAbsolutePath());
+                // Now you can distribute resultingZipFile or set it as a server resource pack
+            } else {
+                System.out.println("Resource pack creation failed. Check logs for details.");
+            }
+
+        } catch (IOException e) {
+            System.err.println("IO Error during resource pack creation: " + e.getMessage());
+            e.printStackTrace();
+        } catch (IllegalArgumentException e) {
+            System.err.println("Invalid parameters for resource pack creation: " + e.getMessage());
+        }
+    }
+}
